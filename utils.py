@@ -1,28 +1,73 @@
 import numpy as np
 import math
+import heapq
+from collections import defaultdict, Counter
 
 # RLE Compression
 def rle_encode(data):
-    encoding = ''
-    i = 0
-    while i < len(data):
-        count = 1
-        while i + 1 < len(data) and data[i] == data[i + 1]:
-            i += 1
+    encoded = []
+    count = 1
+    for i in range(1, len(data)):
+        if data[i] == data[i - 1]:
             count += 1
-        encoding += str(count) + data[i]
-        i += 1
-    return encoding
+        else:
+            encoded.append(data[i - 1] + str(count))
+            count = 1
+    encoded.append(data[-1] + str(count))  
+    return ''.join(encoded)
 
 def rle_decode(data):
-    decode = ''
+    decoded = []
     i = 0
     while i < len(data):
-        count = int(data[i])
-        decode += data[i + 1] * count
-        i += 1
-        i += 1
-    return decode
+        char = data[i]
+        count = int(data[i + 1])
+        decoded.append(char * count)
+        i += 2
+    return ''.join(decoded)
+
+def rle_compression_ratio(data, encoded):
+    original_size = len(data) * 8  
+    max_count = max(int(encoded[i + 1]) for i in range(0, len(encoded), 2))
+    bits_for_count = max_count.bit_length() 
+    compressed_size = len(encoded) // 2 * (8 + bits_for_count)
+
+    return original_size / compressed_size
+# huffman compression
+def huffman_encode(text):
+    frequency = Counter(text)
+    heap = [[weight, [char, ""]] for char, weight in frequency.items()]
+    heapq.heapify(heap)
+
+    while len(heap) > 1:
+        lo = heapq.heappop(heap)
+        hi = heapq.heappop(heap)
+        for pair in lo[1:]:
+            pair[1] = '0' + pair[1]
+        for pair in hi[1:]:
+            pair[1] = '1' + pair[1]
+        heapq.heappush(heap, [lo[0] + hi[0]] + lo[1:] + hi[1:])
+
+    huffman_codes = sorted(heap[0][1:], key=lambda p: (len(p[-1]), p))
+
+    huffman_dict = {char: code for char, code in huffman_codes}
+    print("Huffman Codes:", huffman_dict)
+
+
+    encoded_text = "".join(huffman_dict[char] for char in text)
+    return encoded_text, huffman_dict
+
+def huffman_decode(encoded_text, huffman_dict):
+    reverse_huffman_dict = {code: char for char, code in huffman_dict.items()}  
+    decoded_text = ""
+    temp = ""
+    for bit in encoded_text:
+        temp += bit
+        if temp in reverse_huffman_dict:
+            decoded_text += reverse_huffman_dict[temp]
+            temp = ""  
+    return decoded_text
+
 
 # Golomb Compression
 # def golomb_encode(data, m):
@@ -123,7 +168,6 @@ class GolombEncoding:
             
         except ValueError:  # Handle invalid binary strings
             return None, encoded_str
-    
 def golomb_encode(data, m):
     encoder = GolombEncoding(m)
     return ''.join(encoder.encode(num) for num in data)
@@ -205,8 +249,15 @@ def compress_image(image, num_levels, full_scale=255):
     quantized_indices = np.floor(image / step_size).astype(int)
     compressed_image = (quantized_indices + 0.5) * step_size
 
-    return compressed_image.clip(0, full_scale).astype(np.uint8), step_size
+    return compressed_image.clip(0, full_scale).astype(np.uint8), step_size, quantized_indices
 
+def decompress_image(quantized_indices, step_size, num_levels):
+    levels = np.arange(num_levels)
+    reconstruction_levels = step_size * (levels + 0.5)
+    quantized_indices = np.array(quantized_indices)
+    decompressed_data = reconstruction_levels[quantized_indices]
+
+    return decompressed_data.clip(0, 255).astype(np.uint8)
 
 
 
