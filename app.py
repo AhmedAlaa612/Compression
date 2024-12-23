@@ -1,12 +1,9 @@
 import streamlit as st
-import base64
-import zlib
-import heapq
 from io import BytesIO
 from utils import *
 import numpy as np
 from PIL import Image
-# Streamlit App
+
 st.sidebar.title("Navigation")
 page = st.sidebar.radio("", ["File Compression", "Image Compression"])
 if page == "File Compression":
