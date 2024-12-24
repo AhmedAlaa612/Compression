@@ -61,27 +61,31 @@ if page == "File Compression":
 
         with col2:
             if st.button("Decompress"):
-                if method == "RLE":
-                    decompressed_data = rle_decode(text)
-                elif method == "Golomb":
-                    decompressed_data = golomb_decode(text, m)
-                elif method == "Arithmetic":
-                    lines = text.split('\n')
-                    encoded_value = float(lines[0])
-                    probabilities = eval(lines[1])
-                    mess_len = int(lines[2])
-                    decompressed_data = arithmetic_decode(encoded_value, mess_len,probabilities)
-                elif method == "Huffman":
-                    encoded, huffman_dict = text.split('\n')
-                    decompressed_data = huffman_decode(encoded, eval(huffman_dict))
-                st.text_area("Decompressed Data", decompressed_data, height=200)
-                decompressed_bytes = decompressed_data.encode('utf-8')
-                st.download_button(
-                    label="Download Decompressed File",
-                    data=decompressed_bytes,
-                    file_name="decompressed.txt",
-                    mime="text/plain"
-                )
+                try:
+                    if method == "RLE":
+                        decompressed_data = rle_decode(text)
+                    elif method == "Golomb":
+                        decompressed_data = golomb_decode(text, m)
+                    elif method == "Arithmetic":
+                        lines = text.split('\n')
+                        encoded_value = float(lines[0])
+                        probabilities = eval(lines[1])
+                        mess_len = int(lines[2])
+                        decompressed_data = arithmetic_decode(encoded_value, mess_len,probabilities)
+                    elif method == "Huffman":
+                        encoded, huffman_dict = text.split('\n')
+                        decompressed_data = huffman_decode(encoded, eval(huffman_dict))
+                    st.text_area("Decompressed Data", decompressed_data, height=200)
+                    decompressed_bytes = decompressed_data.encode('utf-8')
+                    st.download_button(
+                        label="Download Decompressed File",
+                        data=decompressed_bytes,
+                        file_name="decompressed.txt",
+                        mime="text/plain"
+                    )
+                except:
+                    st.error("Invalid file. Please upload a valid compressed file.")
+                    st.stop()
                 
 
 elif page == "Image Compression":
@@ -96,8 +100,8 @@ elif page == "Image Compression":
         image_array = np.array(image)
         if method == "Uniform Quantization":
             num_levels = st.number_input("Enter number of levels", min_value=1, value=4, max_value=256, key="num_levels")
-        type = st.selectbox("", ["compress", "decompress"])
         st.image(image, caption="Uploaded Image")
+        type = st.selectbox("", ["compress", "decompress"])
 
         if type == "compress":
             quantized_indices = None
@@ -130,23 +134,27 @@ elif page == "Image Compression":
         else:
             quantized_indices = st.file_uploader("Enter quantized indices", type=["txt"])
             if quantized_indices is not None:
-                    content = quantized_indices.read().decode("utf-8")  # Decode bytes to string
-                    quantized_indices = np.array([int(x) for x in content.splitlines()])  # Convert each line to int
-                    quantized_indices = quantized_indices.reshape(image_array.shape)
-            step_size = st.number_input("Enter step size", min_value=1, value=1, key="step_size")
-            if st.button("Decompress"):
-                st.write("Decompressing...")
-                decompressed_image = decompress_image(quantized_indices, step_size, num_levels)
-                st.image(decompressed_image, caption="Decompressed Image")
-                decompressed_image = Image.fromarray(decompressed_image)
-                buffer = BytesIO()
-                decompressed_image.save(buffer, format=image.format)
-                buffer.seek(0)
-                
-                # Add download button for decompressed image
-                st.download_button(
-                    label="Download Decompressed Image",
-                    data=buffer,
-                    file_name="decompressed_image." + method.lower(),
-                    mime="image/" + method.lower()
-                )
+                    try:
+                        content = quantized_indices.read().decode("utf-8")  # Decode bytes to string
+                        quantized_indices = np.array([int(x) for x in content.splitlines()])  # Convert each line to int
+                        quantized_indices = quantized_indices.reshape(image_array.shape)
+                    except:
+                        st.error("Invalid file format. Please upload a valid txt file.")
+                        st.stop()
+                    step_size = st.number_input("Enter step size", min_value=1, value=1, key="step_size")
+                    if st.button("Decompress"):
+                        st.write("Decompressing...")
+                        decompressed_image = decompress_image(quantized_indices, step_size, num_levels)
+                        st.image(decompressed_image, caption="Decompressed Image")
+                        decompressed_image = Image.fromarray(decompressed_image)
+                        buffer = BytesIO()
+                        decompressed_image.save(buffer, format=image.format)
+                        buffer.seek(0)
+                        
+                        # Add download button for decompressed image
+                        st.download_button(
+                            label="Download Decompressed Image",
+                            data=buffer,
+                            file_name="decompressed_image." + method.lower(),
+                            mime="image/" + method.lower()
+                        )
